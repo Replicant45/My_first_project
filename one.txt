@@ -11,3 +11,5 @@ I build things step by step with care.
 I pay attention to detail.
 I keep going even when things feel confusing.
 I aim to grow a little every day.
+
+I create small projects that I can push to GitHub to track my progres
