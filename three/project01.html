@@ -1,0 +1,763 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>World Clock — Pro</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    :root{
+      --glass: rgba(255,255,255,0.12);
+      --glass-strong: rgba(255,255,255,0.20);
+      --accent: #ffca28;
+      --bg-start: #667db6;
+      --bg-end: #0082c8;
+    }
+    body {
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      margin:0;
+      min-height:100vh;
+      background: linear-gradient(120deg,var(--bg-start),var(--bg-end));
+      color: #fff;
+      transition: background .35s, color .35s;
+    }
+    .dark-mode {
+      background: linear-gradient(120deg,#071021,#0b1220);
+      color: #dfe7ee;
+    }
+
+    .app-header {
+      padding: 28px 20px;
+      text-align:center;
+    }
+
+    .controls {
+      display:flex;
+      gap:12px;
+      justify-content:center;
+      flex-wrap:wrap;
+      margin-bottom:18px;
+    }
+
+    .toggle-btn {
+      border-radius: 10px;
+      padding:8px 14px;
+      background:var(--accent);
+      color:#000;
+      font-weight:600;
+      border: none;
+      cursor:pointer;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+    }
+
+    #searchBar {
+      width:320px;
+      max-width:85%;
+      border-radius: 10px;
+      padding:8px 12px;
+    }
+
+    .container-main {
+      max-width:1200px;
+      margin: 10px auto 60px;
+      padding: 0 16px;
+    }
+
+    .row-grid { margin-top: 18px; display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); }
+
+    .card-clock {
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      border-radius: 14px;
+      padding: 14px;
+      text-align:center;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+      transition: transform .22s ease, box-shadow .22s ease;
+      position: relative;
+      overflow: hidden;
+      min-height:150px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+    }
+    .card-clock:hover { transform: translateY(-8px); box-shadow: 0 18px 40px rgba(0,0,0,0.35); }
+
+    .flag {
+      width:64px;
+      height:42px;
+      object-fit:cover;
+      border-radius:6px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.06);
+      margin: 0 auto 8px;
+      display:block;
+    }
+
+    .country-name { font-weight:700; margin-bottom:6px; font-size:1rem; }
+
+    .digital-time { font-weight:700; font-size:1.05rem; letter-spacing:0.6px; }
+
+    .meta-row { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:8px; }
+    .fav-btn { background:transparent; border:none; cursor:pointer; font-size:20px; color: rgba(255,255,255,0.85); }
+    .fav-btn.active { color: var(--accent); filter: drop-shadow(0 6px 12px rgba(255,200,40,0.12)); transform: scale(1.06); }
+
+    .weather-box { font-size:0.9rem; opacity:0.95; display:flex; align-items:center; gap:8px; justify-content:center; }
+    .weather-icon { width:36px; height:36px; }
+
+    canvas.analog { width:86px; height:86px; border-radius:50%; background: rgba(0,0,0,0.02); display:block; margin:8px auto 2px; }
+
+    .favorites-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+
+    .map {
+      margin-top:28px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+      padding:12px;
+      border-radius:12px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+    }
+
+    .map-canvas {
+      position:relative;
+      width:100%;
+      height:320px;
+      border-radius:8px;
+      overflow:hidden;
+      background-image: url('https://upload.wikimedia.org/wikipedia/commons/8/80/World_map_-_low_resolution_gray.jpg');
+      background-size: cover;
+      background-position:center;
+      filter: contrast(.95) saturate(.7) brightness(.9);
+    }
+
+    .map-marker {
+      position:absolute;
+      width:12px;
+      height:12px;
+      background:var(--accent);
+      border-radius:50%;
+      transform:translate(-50%,-50%);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+      cursor:pointer;
+      transition: transform .15s;
+    }
+    .map-marker:hover { transform: translate(-50%,-50%) scale(1.25); }
+
+    .map-popup {
+      position:absolute;
+      background: rgba(0,0,0,0.7);
+      color:#fff;
+      padding:8px 10px;
+      border-radius:8px;
+      font-size:0.9rem;
+      transform: translate(-50%, -120%);
+      white-space:nowrap;
+      pointer-events:none;
+    }
+
+    .small-muted { font-size:0.85rem; opacity:0.85; }
+
+    /* animations */
+    .fade-up { animation: fadeUp .45s ease both; }
+    @keyframes fadeUp { from { opacity:0; transform: translateY(8px);} to { opacity:1; transform:none;} }
+
+    /* responsive tweaks */
+    @media (max-width:600px){
+      .map { padding:8px; }
+      canvas.analog { width:66px; height:66px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="container-main text-center">
+      <h1 class="mb-1" style="font-weight:800">World Clock — Pro</h1>
+      <p class="small-muted">Digital + analog clocks, live weather (optional), favorites, map interaction and saved settings.</p>
+      <div class="controls mt-3">
+        <button id="themeToggle" class="toggle-btn">Toggle Dark / Light</button>
+        <input id="searchBar" placeholder="Search country or city..." />
+        <button id="sortToggle" class="toggle-btn" title="Toggle auto-sort">Toggle Auto-Sort</button>
+        <button id="weatherToggle" class="toggle-btn" title="Toggle weather display">Toggle Weather</button>
+      </div>
+      <div class="small-muted">Local time: <span id="localTimeSpan"></span></div>
+    </div>
+  </header>
+
+  <main class="container-main">
+    <!-- Favorites -->
+    <section id="favoritesSection" style="display:none">
+      <h5 style="margin-bottom:8px">Favorites</h5>
+      <div id="favoritesRow" class="favorites-row"></div>
+    </section>
+
+    <!-- Grid of clocks -->
+    <section id="gridSection" class="row-grid" aria-live="polite"></section>
+
+    <!-- Map -->
+    <div class="map mt-4">
+      <h5 style="margin-bottom:10px">Interactive Map — click a marker</h5>
+      <div class="map-canvas" id="mapCanvas"></div>
+    </div>
+  </main>
+
+  <footer style="text-align:center; padding:28px 0; color:rgba(255,255,255,0.75)">
+    <small>Tip: Add your OpenWeatherMap API key at the top of the file (WEATHER_API_KEY) to enable weather.</small>
+  </footer>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js">
+  // Weather integration
+  const WEATHER_API_KEY = "YOUR_API_KEY_HERE";
+
+  async function fetchWeather(city, timezone) {
+    try {
+      const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${WEATHER_API_KEY}&units=metric`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.cod !== 200) return null;
+
+      return {
+        sunrise: new Date(data.sys.sunrise * 1000).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+        sunset: new Date(data.sys.sunset * 1000).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+        temp: data.main.temp,
+        desc: data.weather[0].description,
+        icon: data.weather[0].icon
+      };
+    } catch (err) {
+      return null;
+    }
+  }
+
+  async function updateWeather() {
+    const items = document.querySelectorAll('.world-clock-item');
+    for (const item of items) {
+      const city = item.querySelector('.city-name')?.textContent || "";
+      const timezone = item.getAttribute('data-timezone');
+      const weatherBox = item.querySelector('.weather-box');
+      if (!weatherBox || !WEATHER_API_KEY) continue;
+
+      const w = await fetchWeather(city, timezone);
+      if (!w) {
+        weatherBox.innerHTML = "<small>Weather unavailable</small>";
+        continue;
+      }
+
+      weatherBox.innerHTML = `
+        <div class="p-2 rounded" style="background: rgba(255,255,255,0.15); backdrop-filter: blur(6px); border-radius: 12px;">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <img src="https://openweathermap.org/img/wn/${w.icon}.png" alt="icon" style="width:40px;height:40px;">
+            <div>
+              <div style="font-size:1.1rem; font-weight:600;">${w.temp}°C</div>
+              <small>${w.desc}</small>
+            </div>
+          </div>
+          <div class="d-flex justify-content-between mt-1">
+            <small>Sunrise: ${w.sunrise}</small>
+            <small>Sunset: ${w.sunset}</small>
+          </div>
+        </div>`;
+    }
+  }
+
+  setInterval(updateWeather, 60000);
+  updateWeather();
+
+</script>
+
+  <script>
+// Replace with your API key
+const API_KEY = "YOUR_API_KEY_HERE";
+  /*
+    WORLD CLOCK PRO
+    - All features included:
+      1) Auto-sort by local time
+      2) Analog clocks (canvas)
+      3) Weather per country (OpenWeatherMap; add your API key below to enable)
+      4) Favorites (localStorage)
+      5) Interactive map (click markers to focus)
+      6) Smooth animations
+      7) Expanded country list
+      8) Save settings in localStorage (theme, favorites, weather toggle, auto-sort)
+  */
+
+  // ====== CONFIG ======
+  const WEATHER_API_KEY = ""; // <-- Put your OpenWeatherMap API key here (optional). Example: "abcd1234..."
+  const ENABLE_WEATHER = !!WEATHER_API_KEY; // enable only if key present
+  const AUTO_SORT_DEFAULT = true;
+
+  // ====== Countries data: name, timezone, flag, lat/lon (for map marker) ======
+  const COUNTRIES = [
+    { name: 'USA (New York)', tz: 'America/New_York', flag: 'https://flagcdn.com/us.svg', lat: 40.7, lon:-74.0 },
+    { name: 'UK (London)', tz: 'Europe/London', flag: 'https://flagcdn.com/gb.svg', lat:51.5, lon:-0.12 },
+    { name: 'India (Delhi)', tz: 'Asia/Kolkata', flag: 'https://flagcdn.com/in.svg', lat:28.6, lon:77.2 },
+    { name: 'Japan (Tokyo)', tz: 'Asia/Tokyo', flag: 'https://flagcdn.com/jp.svg', lat:35.68, lon:139.75 },
+    { name: 'Australia (Sydney)', tz: 'Australia/Sydney', flag: 'https://flagcdn.com/au.svg', lat:-33.86, lon:151.2 },
+    { name: 'Germany (Berlin)', tz: 'Europe/Berlin', flag: 'https://flagcdn.com/de.svg', lat:52.5, lon:13.4 },
+    { name: 'France (Paris)', tz: 'Europe/Paris', flag: 'https://flagcdn.com/fr.svg', lat:48.85, lon:2.35 },
+    { name: 'Canada (Toronto)', tz: 'America/Toronto', flag: 'https://flagcdn.com/ca.svg', lat:43.65, lon:-79.38 },
+    { name: 'Brazil (São Paulo)', tz: 'America/Sao_Paulo', flag: 'https://flagcdn.com/br.svg', lat:-23.55, lon:-46.63 },
+    { name: 'China (Beijing)', tz: 'Asia/Shanghai', flag: 'https://flagcdn.com/cn.svg', lat:39.90, lon:116.4 },
+    { name: 'Russia (Moscow)', tz: 'Europe/Moscow', flag: 'https://flagcdn.com/ru.svg', lat:55.75, lon:37.6 },
+    { name: 'Spain (Madrid)', tz: 'Europe/Madrid', flag: 'https://flagcdn.com/es.svg', lat:40.42, lon:-3.7 },
+    { name: 'Italy (Rome)', tz: 'Europe/Rome', flag: 'https://flagcdn.com/it.svg', lat:41.9, lon:12.5 },
+    { name: 'Mexico (Mexico City)', tz: 'America/Mexico_City', flag: 'https://flagcdn.com/mx.svg', lat:19.43, lon:-99.13 },
+    { name: 'South Africa (Cape Town)', tz: 'Africa/Johannesburg', flag: 'https://flagcdn.com/za.svg', lat:-33.92, lon:18.42 },
+    { name: 'South Korea (Seoul)', tz: 'Asia/Seoul', flag: 'https://flagcdn.com/kr.svg', lat:37.56, lon:126.98 },
+    { name: 'Indonesia (Jakarta)', tz: 'Asia/Jakarta', flag: 'https://flagcdn.com/id.svg', lat:-6.2, lon:106.8 },
+    { name: 'Turkey (Istanbul)', tz: 'Europe/Istanbul', flag: 'https://flagcdn.com/tr.svg', lat:41.0, lon:28.97 },
+    { name: 'Saudi Arabia (Riyadh)', tz: 'Asia/Riyadh', flag: 'https://flagcdn.com/sa.svg', lat:24.7, lon:46.7 },
+    { name: 'Netherlands (Amsterdam)', tz: 'Europe/Amsterdam', flag: 'https://flagcdn.com/nl.svg', lat:52.37, lon:4.9 },
+    { name: 'Sweden (Stockholm)', tz: 'Europe/Stockholm', flag: 'https://flagcdn.com/se.svg', lat:59.33, lon:18.07 },
+    { name: 'Switzerland (Zurich)', tz: 'Europe/Zurich', flag: 'https://flagcdn.com/ch.svg', lat:47.37, lon:8.54 },
+    { name: 'Argentina (Buenos Aires)', tz: 'America/Argentina/Buenos_Aires', flag: 'https://flagcdn.com/ar.svg', lat:-34.6, lon:-58.37 },
+    { name: 'Egypt (Cairo)', tz: 'Africa/Cairo', flag: 'https://flagcdn.com/eg.svg', lat:30.04, lon:31.24 },
+    { name: 'Nigeria (Lagos)', tz: 'Africa/Lagos', flag: 'https://flagcdn.com/ng.svg', lat:6.45, lon:3.4 },
+    { name: 'Poland (Warsaw)', tz: 'Europe/Warsaw', flag: 'https://flagcdn.com/pl.svg', lat:52.23, lon:21.01 },
+    { name: 'Thailand (Bangkok)', tz: 'Asia/Bangkok', flag: 'https://flagcdn.com/th.svg', lat:13.75, lon:100.52 },
+    { name: 'Vietnam (Hanoi)', tz: 'Asia/Ho_Chi_Minh', flag: 'https://flagcdn.com/vn.svg', lat:21.03, lon:105.85 },
+    { name: 'Philippines (Manila)', tz: 'Asia/Manila', flag: 'https://flagcdn.com/ph.svg', lat:14.6, lon:120.98 },
+    { name: 'New Zealand (Auckland)', tz: 'Pacific/Auckland', flag: 'https://flagcdn.com/nz.svg', lat:-36.85, lon:174.76 }
+  ];
+
+  // ====== Local storage keys ======
+  const LS_KEYS = {
+    THEME: 'wc_theme',
+    FAVORITES: 'wc_favs',
+    AUTO_SORT: 'wc_auto_sort',
+    WEATHER_ENABLED: 'wc_weather_enabled'
+  };
+
+  // ====== App state ======
+  let state = {
+    favorites: new Set(JSON.parse(localStorage.getItem(LS_KEYS.FAVORITES) || '[]')),
+    autoSort: (localStorage.getItem(LS_KEYS.AUTO_SORT) !== null) ? JSON.parse(localStorage.getItem(LS_KEYS.AUTO_SORT)) : AUTO_SORT_DEFAULT,
+    weatherEnabled: (localStorage.getItem(LS_KEYS.WEATHER_ENABLED) !== null) ? JSON.parse(localStorage.getItem(LS_KEYS.WEATHER_ENABLED)) : ENABLE_WEATHER,
+    themeDark: (localStorage.getItem(LS_KEYS.THEME) === 'dark')
+  };
+
+  // ====== DOM refs ======
+  const gridSection = document.getElementById('gridSection');
+  const favoritesSection = document.getElementById('favoritesSection');
+  const favoritesRow = document.getElementById('favoritesRow');
+  const mapCanvas = document.getElementById('mapCanvas');
+  const localTimeSpan = document.getElementById('localTimeSpan');
+
+  // utility: get localized time string for a timezone
+  function getTimeForTZ(tz, opts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12:false }) {
+    try {
+      return new Date().toLocaleTimeString([], { timeZone: tz, ...opts });
+    } catch(e) {
+      return '—';
+    }
+  }
+
+  // get date object in timezone using formatToParts to avoid locale-parsing issues
+  function getDateForTZ(tz) {
+    try {
+      const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }).formatToParts(new Date());
+      const p = {};
+      parts.forEach(pt => { if (pt.type && pt.value) p[pt.type] = pt.value; });
+      const iso = `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}`;
+      return new Date(iso);
+    } catch(e) { return new Date(); }
+  }
+
+  // draw analog clock on a canvas element for given Date object
+  function drawAnalog(canvas, date) {
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width = canvas.clientWidth * devicePixelRatio;
+    const h = canvas.height = canvas.clientHeight * devicePixelRatio;
+    const cx = w/2, cy = h/2;
+    const r = Math.min(w,h)/2 * 0.85;
+    ctx.clearRect(0,0,w,h);
+
+    // background
+    ctx.beginPath();
+    ctx.fillStyle = 'rgba(255,255,255,0.035)';
+    ctx.arc(cx,cy,r+2,0,Math.PI*2); ctx.fill();
+
+    // ticks
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = Math.max(1, r*0.018);
+    for (let i=0;i<60;i++){
+      ctx.beginPath();
+      const len = (i%5===0) ? r*0.12 : r*0.06;
+      const x1 = (r - 6) * Math.cos(i*Math.PI/30);
+      const y1 = (r - 6) * Math.sin(i*Math.PI/30);
+      const x2 = (r - 6 - len) * Math.cos(i*Math.PI/30);
+      const y2 = (r - 6 - len) * Math.sin(i*Math.PI/30);
+      ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    }
+    ctx.restore();
+
+    // hands
+    const hrs = date.getHours() % 12;
+    const mins = date.getMinutes();
+    const secs = date.getSeconds();
+    const ms = date.getMilliseconds();
+
+    // hour hand
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.rotate((Math.PI/6)*hrs + (Math.PI/360)*mins + (Math.PI/21600)*secs);
+    ctx.lineWidth = Math.max(2, r*0.06);
+    ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+    ctx.beginPath();
+    ctx.moveTo(-r*0.08, r*0.04);
+    ctx.lineTo(0, -r*0.5);
+    ctx.stroke();
+    ctx.restore();
+
+    // minute hand
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.rotate((Math.PI/30)*mins + (Math.PI/1800)*secs);
+    ctx.lineWidth = Math.max(1.6, r*0.04);
+    ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+    ctx.beginPath();
+    ctx.moveTo(-r*0.06, r*0.06);
+    ctx.lineTo(0, -r*0.75);
+    ctx.stroke();
+    ctx.restore();
+
+    // second hand
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.rotate((Math.PI/30)*secs + (Math.PI/30000)*ms);
+    ctx.lineWidth = Math.max(1, r*0.02);
+    ctx.strokeStyle = 'rgba(255,110,60,0.95)';
+    ctx.beginPath();
+    ctx.moveTo(-r*0.06, r*0.08);
+    ctx.lineTo(0, -r*0.84);
+    ctx.stroke();
+    // counterbalance
+    ctx.beginPath();
+    ctx.fillStyle = 'rgba(255,110,60,0.95)';
+    ctx.arc(0, r*0.12, r*0.04, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+
+    // center pin
+    ctx.beginPath(); ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.arc(cx,cy, r*0.035,0,Math.PI*2); ctx.fill();
+  }
+
+  // format temperature nicely if available
+  function formatWeather(weatherData) {
+    if (!weatherData) return { display: 'No data', icon:'' };
+    const temp = Math.round(weatherData.main.temp);
+    const desc = weatherData.weather && weatherData.weather[0] && weatherData.weather[0].main || '';
+    const icon = weatherData.weather && weatherData.weather[0] && weatherData.weather[0].icon || '';
+    return { display: `${temp}°C ${desc}`, icon };
+  }
+
+  // fetch weather for lat/lon via OpenWeatherMap (metric)
+  async function fetchWeather(lat, lon) {
+    if (!WEATHER_API_KEY) return null;
+    try {
+      const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${WEATHER_API_KEY}`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data;
+    } catch(e) { return null; }
+  }
+
+  // create a single card element and return it
+  function makeCard(country, idx) {
+    const el = document.createElement('div');
+    el.className = 'card-clock fade-up';
+    el.dataset.index = idx;
+    el.dataset.name = country.name.toLowerCase();
+
+    const favActive = state.favorites.has(country.name) ? 'active' : '';
+
+    el.innerHTML = `
+      <img class="flag" src="${country.flag}" alt="${country.name} flag" loading="lazy" />
+      <div style="margin-top:6px">
+        <div class="country-name">${country.name}</div>
+        <canvas class="analog" id="analog-${idx}" width="86" height="86" ></canvas>
+        <div class="digital-time" id="digital-${idx}">--:--:--</div>
+        <div class="meta-row">
+          <div class="weather-box" id="weather-${idx}">${ state.weatherEnabled ? 'Loading...' : '<span class="small-muted">Weather off</span>' }</div>
+          <button class="fav-btn ${favActive}" title="Toggle favorite" aria-label="favorite" data-country="${country.name}">★</button>
+        </div>
+      </div>
+    `;
+    // attach favorite click
+    const btn = el.querySelector('.fav-btn');
+    btn.addEventListener('click', () => toggleFavorite(country.name, btn));
+    return el;
+  }
+
+  // toggle favorite and persist
+  function toggleFavorite(countryName, btnEl) {
+    if (state.favorites.has(countryName)) {
+      state.favorites.delete(countryName);
+      btnEl.classList.remove('active');
+    } else {
+      state.favorites.add(countryName);
+      btnEl.classList.add('active');
+    }
+    localStorage.setItem(LS_KEYS.FAVORITES, JSON.stringify(Array.from(state.favorites)));
+    renderFavorites();
+  }
+
+  // render favorites row
+  function renderFavorites() {
+    const favs = Array.from(state.favorites);
+    if (favs.length === 0) {
+      favoritesSection.style.display = 'none';
+      return;
+    }
+    favoritesSection.style.display = 'block';
+    favoritesRow.innerHTML = '';
+    favs.forEach(name => {
+      const country = COUNTRIES.find(c => c.name === name);
+      if (!country) return;
+      const badge = document.createElement('div');
+      badge.className = 'card-clock';
+      badge.style.minWidth = '200px';
+      badge.style.padding = '10px 12px';
+      const safeId = 'fav-dig-' + name.replace(/[^a-zA-Z0-9_-]/g,'_');
+      badge.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px">
+          <img class="flag" src="${country.flag}" style="width:44px;height:28px"/>
+          <div style="flex:1;text-align:left">
+            <div style="font-weight:700;font-size:0.95rem">${country.name}</div>
+            <div class="small-muted" id="${safeId}">--:--:--</div>
+          </div>
+          <button class="fav-btn active" title="Unfavorite" data-country="${country.name}">★</button>
+        </div>
+      `;
+      const btn = badge.querySelector('.fav-btn');
+      btn.addEventListener('click', () => {
+        state.favorites.delete(country.name);
+        localStorage.setItem(LS_KEYS.FAVORITES, JSON.stringify(Array.from(state.favorites)));
+        renderFavorites();
+        renderGrid();
+      });
+      favoritesRow.appendChild(badge);
+    });
+  }
+
+  // Render grid with current filter and auto-sort
+  function renderGrid(filterText='') {
+    const grid = document.createDocumentFragment();
+    let items = COUNTRIES.map((c,i) => ({ c, i }));
+
+    // if autoSort: compute sortable numeric value = hours*3600 + minutes*60 + seconds in timezone
+    if (state.autoSort) {
+      items.sort((a,b) => {
+        const ta = getDateForTZ(a.c.tz), tb = getDateForTZ(b.c.tz);
+        return ta.getHours()*3600 + ta.getMinutes()*60 + ta.getSeconds() - (tb.getHours()*3600 + tb.getMinutes()*60 + tb.getSeconds());
+      });
+    }
+
+    // filter by search
+    const q = filterText.trim().toLowerCase();
+    items = items.filter(it => it.c.name.toLowerCase().includes(q));
+
+    // build nodes
+    gridSection.innerHTML = '';
+    items.forEach((it) => {
+      const node = makeCard(it.c, it.i);
+      gridSection.appendChild(node);
+    });
+
+    // trigger initial updates for clocks & weather
+    updateAllClocks(true);
+    // render favorites separately
+    renderFavorites();
+  }
+
+  // update digital and analog clocks and weather periodically
+  async function updateAllClocks(initial=false) {
+    // update local time display
+    localTimeSpan.textContent = new Date().toLocaleString();
+
+    // for each visible card
+    const cards = gridSection.querySelectorAll('.card-clock');
+    for (const card of cards) {
+      const idx = card.dataset.index;
+      const country = COUNTRIES[idx];
+      const dig = card.querySelector(`#digital-${idx}`);
+      const canvas = card.querySelector(`#analog-${idx}`);
+      // time
+      const dateTZ = getDateForTZ(country.tz);
+      if (dig) dig.textContent = getTimeForTZ(country.tz);
+      // analog
+      if (canvas) drawAnalog(canvas, dateTZ);
+
+      // weather
+      const weatherBox = card.querySelector(`#weather-${idx}`);
+      if (weatherBox) {
+        if (state.weatherEnabled && WEATHER_API_KEY) {
+          // cache key
+          const cacheKey = `__wc_weather_${country.name}`;
+          const cached = JSON.parse(sessionStorage.getItem(cacheKey) || 'null');
+          const nowTs = Date.now();
+          if (cached && (nowTs - cached.ts < 3 * 60 * 1000)) {
+            const f = formatWeather(cached.data);
+            weatherBox.innerHTML = f.icon ? `<img class="weather-icon" src="https://openweathermap.org/img/wn/${f.icon}@2x.png" alt=""> ${f.display}` : f.display;
+          } else {
+            weatherBox.textContent = '...';
+            fetchWeather(country.lat, country.lon).then(data => {
+              sessionStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data }));
+              const f = formatWeather(data);
+              weatherBox.innerHTML = f.icon ? `<img class="weather-icon" src="https://openweathermap.org/img/wn/${f.icon}@2x.png" alt=""> ${f.display}` : f.display;
+            }).catch(() => { weatherBox.textContent = 'N/A'; });
+          }
+        } else {
+          weatherBox.innerHTML = '<span class="small-muted">Weather off</span>';
+        }
+      }
+    }
+
+    // update favorites small displays
+    state.favorites.forEach(name => {
+      const id = `fav-dig-${name.replace(/[^a-zA-Z0-9_-]/g,'_')}`;
+      const el = document.getElementById(id);
+      if (el) {
+        const country = COUNTRIES.find(c => c.name === name);
+        el.textContent = getTimeForTZ(country.tz);
+      }
+    });
+
+    // Optionally, resort if autoSort active every minute (so visual reordering doesn't jitter too often)
+    if (state.autoSort && !initial) {
+      // only resort once per minute: check seconds
+      const s = new Date().getSeconds();
+      if (s === 0) {
+        renderGrid(document.getElementById('searchBar').value);
+      }
+    }
+  }
+
+  // ====== Map rendering: place markers by converting lat/lon to approximate background positions
+  // NOTE: This uses simple equirectangular projection approximations for the static world image used.
+  function latLonToPos(lat, lon, container) {
+    // lat range -90..90 -> y 0..100%; lon -180..180 -> x 0..100%
+    const x = ((lon + 180) / 360) * container.clientWidth;
+    const y = ((90 - lat) / 180) * container.clientHeight;
+    return { x, y };
+  }
+
+  function renderMap() {
+    mapCanvas.innerHTML = '';
+    COUNTRIES.forEach((country, i) => {
+      const marker = document.createElement('div');
+      marker.className = 'map-marker';
+      marker.dataset.index = i;
+      mapCanvas.appendChild(marker);
+      // position
+      const pos = latLonToPos(country.lat, country.lon, mapCanvas);
+      marker.style.left = pos.x + 'px';
+      marker.style.top = pos.y + 'px';
+      // popup container
+      const popup = document.createElement('div');
+      popup.className = 'map-popup';
+      popup.style.display = 'none';
+      marker.appendChild(popup);
+
+      // click handler: focus card & show popup time & weather
+      marker.addEventListener('click', async (ev) => {
+        ev.stopPropagation();
+        // close other popups
+        document.querySelectorAll('.map-popup').forEach(p => p.style.display = 'none');
+        // fill popup
+        const idx = marker.dataset.index;
+        const c = COUNTRIES[idx];
+        popup.style.display = 'block';
+        popup.innerHTML = `<strong>${c.name}</strong><div style="font-size:0.9rem;margin-top:6px">${getTimeForTZ(c.tz)}</div><div id="mp-w-${idx}" style="margin-top:6px;font-size:0.85rem">${ state.weatherEnabled && WEATHER_API_KEY ? '...' : '<span class="small-muted">Weather off</span>' }</div>`;
+        // show weather if enabled
+        if (state.weatherEnabled && WEATHER_API_KEY) {
+          const data = await fetchWeather(c.lat, c.lon);
+          const f = formatWeather(data);
+          const el = document.getElementById('mp-w-'+idx);
+          el.innerHTML = f.icon ? `<img style="height:28px;vertical-align:middle" src="https://openweathermap.org/img/wn/${f.icon}@2x.png"> ${f.display}` : f.display;
+        }
+        // scroll to card
+        const cardElem = gridSection.querySelector(`.card-clock[data-index="${idx}"]`);
+        if (cardElem) {
+          cardElem.scrollIntoView({ behavior:'smooth', block:'center' });
+          // tiny pulse effect
+          cardElem.style.transition = 'transform .12s';
+          cardElem.style.transform = 'scale(1.02)';
+          setTimeout(()=> cardElem.style.transform = '', 260);
+        }
+      });
+    });
+
+    // clicking map canvas hides popups
+    mapCanvas.addEventListener('click', () => {
+      document.querySelectorAll('.map-popup').forEach(p => p.style.display = 'none');
+    });
+
+    // handle resize repositioning
+    window.addEventListener('resize', () => {
+      document.querySelectorAll('.map-marker').forEach(m => {
+        const idx = m.dataset.index;
+        const c = COUNTRIES[idx];
+        const pos = latLonToPos(c.lat, c.lon, mapCanvas);
+        m.style.left = pos.x + 'px';
+        m.style.top = pos.y + 'px';
+      });
+    });
+  }
+
+  // UI control wiring
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    state.themeDark = !state.themeDark;
+    applyTheme();
+  });
+
+  document.getElementById('sortToggle').addEventListener('click', () => {
+    state.autoSort = !state.autoSort;
+    localStorage.setItem(LS_KEYS.AUTO_SORT, JSON.stringify(state.autoSort));
+    renderGrid(document.getElementById('searchBar').value);
+  });
+
+  document.getElementById('weatherToggle').addEventListener('click', () => {
+    state.weatherEnabled = !state.weatherEnabled;
+    localStorage.setItem(LS_KEYS.WEATHER_ENABLED, JSON.stringify(state.weatherEnabled));
+    renderGrid(document.getElementById('searchBar').value);
+  });
+
+  // search filter
+  document.getElementById('searchBar').addEventListener('input', (e) => {
+    renderGrid(e.target.value);
+  });
+
+  // apply theme saved or default
+  function applyTheme() {
+    if (state.themeDark) document.body.classList.add('dark-mode'); else document.body.classList.remove('dark-mode');
+    localStorage.setItem(LS_KEYS.THEME, state.themeDark ? 'dark' : 'light');
+  }
+
+  // initial render & intervals
+  function startApp() {
+    applyTheme();
+    renderGrid();
+    renderMap();
+    // set initial local time
+    localTimeSpan.textContent = new Date().toLocaleString();
+    // update loop: every second for smooth analog, but to avoid heavy re-renders we update analog/digital often and recalc sorting when needed
+    setInterval(updateAllClocks, 1000);
+  }
+
+  // initialize favorites from storage
+  (function initStateFromStorage(){
+    const storedFavs = JSON.parse(localStorage.getItem(LS_KEYS.FAVORITES) || '[]');
+    state.favorites = new Set(storedFavs);
+  })();
+
+  // Kick off
+  startApp();
+
+  // Expose for debugging (optional)
+  window.__WC = { state, renderGrid, renderMap, COUNTRIES };
+  </script>
+</body>
+</html>
